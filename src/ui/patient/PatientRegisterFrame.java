@@ -1,7 +1,7 @@
-
 package ui.patient;
-
+import dao.PatientDAO;
 import java.awt.*;
+import java.sql.SQLException;
 import javax.swing.*;
 
 public class PatientRegisterFrame extends JFrame {
@@ -141,48 +141,95 @@ public class PatientRegisterFrame extends JFrame {
         cmbBloodGroup.setSelectedIndex(0);
     }
 
-    private void registerPatient() {
-        String name = txtName.getText().trim();
-        String age = txtAge.getText().trim();
-        String contact = txtContact.getText().trim();
-        String address = txtAddress.getText().trim();
+    
+private void registerPatient() {
+    String name = txtName.getText().trim();
+    String age = txtAge.getText().trim();
+    String contact = txtContact.getText().trim();
+    String address = txtAddress.getText().trim();
 
-        if (name.isEmpty() || age.isEmpty() || contact.isEmpty()
-                || address.isEmpty()
-                || cmbGender.getSelectedIndex() == 0
-                || cmbBloodGroup.getSelectedIndex() == 0) {
-            JOptionPane.showMessageDialog(
-                this, "Please fill in all fields."
-            );
-            return;
-        }
+    String gender = String.valueOf(cmbGender.getSelectedItem());
+    String bloodGroup = String.valueOf(cmbBloodGroup.getSelectedItem());
 
-        try {
-            int ageValue = Integer.parseInt(age);
-            if (ageValue < 1 || ageValue > 120) {
-                JOptionPane.showMessageDialog(this, "Enter a valid age.");
-                return;
-            }
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Age must be a number.");
-            return;
-        }
-
-        if (!contact.matches("\\d{10}")) {
-            JOptionPane.showMessageDialog(
-                this, "Enter a valid 10-digit contact number."
-            );
-            return;
-        }
+    // Validate required fields
+    if (name.isEmpty() || age.isEmpty() || contact.isEmpty()
+            || address.isEmpty()
+            || cmbGender.getSelectedIndex() == 0
+            || cmbBloodGroup.getSelectedIndex() == 0) {
 
         JOptionPane.showMessageDialog(
-            this, "Form validated. Database registration is not connected yet."
+            this, "Please fill in all fields."
         );
+        return;
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() ->
-            new PatientRegisterFrame().setVisible(true)
+    // Validate age
+    int ageValue;
+
+    try {
+        ageValue = Integer.parseInt(age);
+
+        if (ageValue < 1 || ageValue > 120) {
+            JOptionPane.showMessageDialog(
+                this, "Enter a valid age between 1 and 120."
+            );
+            return;
+        }
+    } catch (NumberFormatException ex) {
+        JOptionPane.showMessageDialog(
+            this, "Age must be a number."
+        );
+        return;
+    }
+
+    // Validate contact number
+    if (!contact.matches("\\d{10}")) {
+        JOptionPane.showMessageDialog(
+            this, "Enter a valid 10-digit contact number."
+        );
+        return;
+    }
+
+    // Save the patient in MySQL
+    try {
+        PatientDAO dao = new PatientDAO();
+
+        boolean saved = dao.registerPatient(
+            name,
+            ageValue,
+            gender,
+            contact,
+            address,
+            bloodGroup
+        );
+
+        if (saved) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Registration successful! You can now log in.",
+                "Success",
+                JOptionPane.INFORMATION_MESSAGE
+            );
+
+            new PatientLoginFrame().setVisible(true);
+            dispose();
+
+        } else {
+            JOptionPane.showMessageDialog(
+                this,
+                "Registration failed. Please try again.",
+                "Registration Error",
+                JOptionPane.WARNING_MESSAGE
+            );
+        }
+
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(
+            this,
+            "Could not register patient:\n" + ex.getMessage(),
+            "Database Error",
+            JOptionPane.ERROR_MESSAGE
         );
     }
+}
 }
